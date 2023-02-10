@@ -23,3 +23,4 @@ export async function getRental(req, res) {
     res.status(500).send(error.message);
   }
 }
+
