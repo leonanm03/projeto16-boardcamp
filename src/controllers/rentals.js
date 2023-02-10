@@ -8,7 +8,31 @@ import {
 // GET ALL
 export async function getRentals(req, res) {
   try {
-    const rentals = await db.query(`SELECT * FROM ${rentalsTable}`);
+    const rentals = await db.query(`WITH rental_game_customer AS (
+        SELECT rentals.id, rentals."customerId", rentals."gameId", rentals."rentDate", rentals."daysRented", rentals."returnDate", rentals."originalPrice", rentals."delayFee",
+               customers.id AS customer_id, customers.name AS customer_name,
+               games.id AS game_id, games.name AS game_name
+        FROM rentals
+        JOIN customers ON rentals."customerId" = customers.id
+        JOIN games ON rentals."gameId" = games.id
+      )
+      SELECT *
+      FROM (
+        SELECT
+          id,
+          "customerId",
+          "gameId",
+          "rentDate",
+          "daysRented",
+          "returnDate",
+          "originalPrice",
+          "delayFee",
+          json_build_object('id', customer_id, 'name', customer_name) AS customer,
+          json_build_object('id', game_id, 'name', game_name) AS game
+        FROM rental_game_customer
+      ) rental_game_customer;
+      `);
+
     console.log(rentals.rows);
     res.status(200).send(rentals.rows);
   } catch (error) {
@@ -65,4 +89,10 @@ export async function postRental(req, res) {
   } catch (error) {
     res.status(500).send(error.message);
   }
+}
+
+export async function postRentalReturn(req, res) {
+  const { id } = req.params;
+
+  return res.status(200).send();
 }
