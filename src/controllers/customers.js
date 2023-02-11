@@ -53,3 +53,38 @@ export async function getCustomerById(req, res) {
     res.status(500).send(error.message);
   }
 }
+
+// PUT CUSTOMER
+export async function putCustomer(req, res) {
+  const { id } = req.params;
+  const { name, cpf, phone, birthday } = req.body;
+
+  try {
+    const customer = await db.query(
+      `SELECT * FROM ${customersTable} WHERE id = $1`,
+      [id]
+    );
+
+    if (customer.rows.length === 0) {
+      return res.status(404).send("Customer not found");
+    }
+
+    const cpfAlreadyExists = await db.query(
+      `SELECT * FROM ${customersTable} WHERE cpf = $1 AND id <> $2`,
+      [cpf, id]
+    );
+
+    if (cpfAlreadyExists.rows.length > 0) {
+      return res.status(409).send("This CPF is already in use");
+    }
+
+    await db.query(
+      `UPDATE ${customersTable} SET name = $1, cpf = $2, phone = $3, birthday = $4 WHERE id = $5`,
+      [name, cpf, phone, birthday, id]
+    );
+
+    res.status(200).send("Customer updated");
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+}
