@@ -73,6 +73,20 @@ export async function postRental(req, res) {
       return res.status(400).send("Game not found!");
     }
 
+    // Check if game is available
+    const gamesRented = await db.query(
+      `SELECT * FROM ${rentalsTable} WHERE "gameId" = $1 AND "returnDate" IS NULL`,
+      [gameId]
+    );
+
+    const gameStock = gameExists.rows[0].stockTotal;
+    const gameRented = gamesRented.rows.length;
+
+    const notInStock = gameStock <= gameRented;
+    if (notInStock) {
+      return res.status(400).send("Game not in stock!");
+    }
+
     const rental = await db.query(
       `INSERT INTO ${rentalsTable} ("customerId", "gameId", "rentDate", "daysRented", "returnDate", "originalPrice", "delayFee") VALUES ($1, $2, $3, $4, $5, $6, $7);`,
       [
