@@ -118,7 +118,7 @@ export async function postRentalReturn(req, res) {
       `SELECT * FROM ${rentalsTable} WHERE id = $1`,
       [id]
     );
-    if (rentalExists.rows[0] === 0) {
+    if (rentalExists.rows.length === 0) {
       return res.status(404).send("Rental not found!");
     }
     rental = rentalExists.rows[0];
@@ -162,7 +162,7 @@ export async function deleteRental(req, res) {
       `SELECT * FROM ${rentalsTable} WHERE id = $1`,
       [id]
     );
-    if (rentalExists.rows[0] === 0) {
+    if (rentalExists.rows.length === 0) {
       return res.status(404).send("Rental not found!");
     }
 
