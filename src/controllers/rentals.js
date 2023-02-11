@@ -91,8 +91,81 @@ export async function postRental(req, res) {
   }
 }
 
+// RETURN RENTAL
 export async function postRentalReturn(req, res) {
   const { id } = req.params;
+  const dateNow = new Date();
+  const newReturnDate = dateNow.toISOString().split("T")[0];
+  let rental;
+  console.log(newReturnDate);
 
-  return res.status(200).send();
+  try {
+    const rentalExists = await db.query(
+      `SELECT * FROM ${rentalsTable} WHERE id = $1`,
+      [id]
+    );
+    if (rentalExists.rows[0] === 0) {
+      return res.status(404).send("Rental not found!");
+    }
+    rental = rentalExists.rows[0];
+
+    const returned = rental.returnDate;
+    if (returned !== null) {
+      return res.status(400).send("Rental already returned!");
+    }
+
+    const rentDate = new Date(rental.rentDate);
+    const daysRented = rental.daysRented;
+    const returnDate = new Date(newReturnDate);
+    const timeDiff = Math.abs(returnDate.getTime() - rentDate.getTime());
+    const diffDays = Math.ceil(timeDiff / (1000 * 3600 * 24));
+    const delay = diffDays - daysRented;
+    let delayFee = 0;
+    if (delay > 0) {
+      const game = await db.query(`SELECT * FROM ${gamesTable} WHERE id = $1`, [
+        rental.gameId,
+      ]);
+      const { pricePerDay } = game.rows[0];
+
+      delayFee = delay * pricePerDay;
+    }
+
+    const updatedRental = await db.query(
+      `UPDATE ${rentalsTable} SET "returnDate" = $1, "delayFee" = $2 WHERE id = $3`,
+      [newReturnDate, delayFee, id]
+    );
+
+    res.status(200).send();
+  } catch (error) {}
+}
+
+// DELETE RENTAL
+export async function deleteRental(req, res) {
+  const { id } = req.params;
+
+  try {
+    const rentalExists = await db.query(
+      `SELECT * FROM ${rentalsTable} WHERE id = $1`,
+      [id]
+    );
+    if (rentalExists.rows[0] === 0) {
+      return res.status(404).send("Rental not found!");
+    }
+
+    const rental = rentalExists.rows[0];
+
+    const returned = rental.returnDate;
+    if (returned === null) {
+      return res.status(400).send("Rental not returned!");
+    }
+
+    const deletedRental = await db.query(
+      `DELETE FROM ${rentalsTable} WHERE id = $1`,
+      [id]
+    );
+
+    res.status(200).send();
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
 }
