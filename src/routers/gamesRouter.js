@@ -7,7 +7,6 @@ import { getGames, postGame } from "../controllers/games.js";
 // schema validation
 import validateSchema from "../middlewares/schemaMiddleware.js";
 import gameSchema from "../models/gamesSchemas.js";
-
 const router = Router();
 
 router.get("/games", getGames);
