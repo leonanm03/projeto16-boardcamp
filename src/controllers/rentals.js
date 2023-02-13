@@ -10,15 +10,14 @@ import {
 export async function getRentals(req, res) {
   try {
     const rentals = await db.query(`WITH rental_game_customer AS (
-      SELECT ${rentalsTable}.id, ${rentalsTable}."customerId", ${rentalsTable}."gameId", ${rentalsTable}."rentDate",
-      ${rentalsTable}."daysRented", ${rentalsTable}."returnDate", ${rentalsTable}."originalPrice", ${rentalsTable}."delayFee",
+      SELECT ${rentalsTable}.id, ${rentalsTable}."customerId", ${rentalsTable}."gameId", ${rentalsTable}."rentDate", ${rentalsTable}."daysRented", ${rentalsTable}."returnDate", ${rentalsTable}."originalPrice", ${rentalsTable}."delayFee",
              customers.id AS customer_id, customers.name AS customer_name,
              games.id AS game_id, games.name AS game_name
       FROM ${rentalsTable}
       JOIN customers ON ${rentalsTable}."customerId" = customers.id
       JOIN games ON ${rentalsTable}."gameId" = games.id
     )
-    SELECT row_to_json(rental_game_customer) AS rental
+    SELECT *
     FROM (
       SELECT
         id,
