@@ -1,4 +1,7 @@
+// dependencies
 import { Router } from "express";
+
+// controllers routers
 import rentalsRouter from "./rentalsRouter.js";
 import gamesRouter from "./gamesRouter.js";
 import customersRouter from "./customersRouter.js";

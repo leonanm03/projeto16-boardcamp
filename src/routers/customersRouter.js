@@ -1,13 +1,17 @@
+// dependencies
 import { Router } from "express";
 
+// controllers functions
 import {
   getCustomerById,
   getCustomers,
   postCustomer,
   putCustomer,
 } from "../controllers/customers.js";
+
+// schema validation
 import validateSchema from "../middlewares/schemaMiddleware.js";
-import customerSchema from "../schemas/customerSchemas.js";
+import customerSchema from "../models/customerSchemas.js";
 
 const router = Router();
 

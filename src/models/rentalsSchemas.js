@@ -1,3 +1,4 @@
+// dependencies
 import joi from "joi";
 
 const rentalSchema = joi.object({

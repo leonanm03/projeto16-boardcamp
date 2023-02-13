@@ -1,3 +1,4 @@
+// dependencies
 import joi from "joi";
 
 const customerSchema = joi.object({
@@ -5,7 +6,7 @@ const customerSchema = joi.object({
   cpf: joi
     .string()
     .length(11)
-    .pattern(/^[0-9]+$/)
+    .pattern(/^[0-9]+$/) // only numbers
     .required(),
   phone: joi.string().length(10).length(11).required(),
   birthday: joi.date().max("now").required(),

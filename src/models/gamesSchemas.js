@@ -1,3 +1,4 @@
+// dependencies
 import joi from "joi";
 
 const gameSchema = joi.object({

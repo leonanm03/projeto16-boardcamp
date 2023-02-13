@@ -1,13 +1,17 @@
+// dependencies
 import { Router } from "express";
 
+// controllers functions
 import {
   deleteRental,
   getRentals,
   postRental,
   postRentalReturn,
 } from "../controllers/rentals.js";
+
+// schema validation
 import validateSchema from "../middlewares/schemaMiddleware.js";
-import rentalSchema from "../schemas/rentalsSchemas.js";
+import rentalSchema from "../models/rentalsSchemas.js";
 
 const router = Router();
 

@@ -1,3 +1,4 @@
+// config imports
 import {
   customersTable,
   db,
@@ -9,59 +10,57 @@ import {
 export async function getRentals(req, res) {
   try {
     const rentals = await db.query(`WITH rental_game_customer AS (
-        SELECT rentals.id, rentals."customerId", rentals."gameId", rentals."rentDate", rentals."daysRented", rentals."returnDate", rentals."originalPrice", rentals."delayFee",
-               customers.id AS customer_id, customers.name AS customer_name,
-               games.id AS game_id, games.name AS game_name
-        FROM rentals
-        JOIN customers ON rentals."customerId" = customers.id
-        JOIN games ON rentals."gameId" = games.id
-      )
-      SELECT *
-      FROM (
-        SELECT
-          id,
-          "customerId",
-          "gameId",
-          "rentDate",
-          "daysRented",
-          "returnDate",
-          "originalPrice",
-          "delayFee",
-          json_build_object('id', customer_id, 'name', customer_name) AS customer,
-          json_build_object('id', game_id, 'name', game_name) AS game
-        FROM rental_game_customer
-      ) rental_game_customer;
+      SELECT ${rentalsTable}.id, ${rentalsTable}."customerId", ${rentalsTable}."gameId", ${rentalsTable}."rentDate",
+      ${rentalsTable}."daysRented", ${rentalsTable}."returnDate", ${rentalsTable}."originalPrice", ${rentalsTable}."delayFee",
+             customers.id AS customer_id, customers.name AS customer_name,
+             games.id AS game_id, games.name AS game_name
+      FROM ${rentalsTable}
+      JOIN customers ON ${rentalsTable}."customerId" = customers.id
+      JOIN games ON ${rentalsTable}."gameId" = games.id
+    )
+    SELECT row_to_json(rental_game_customer) AS rental
+    FROM (
+      SELECT
+        id,
+        "customerId",
+        "gameId",
+        "rentDate",
+        "daysRented",
+        "returnDate",
+        "originalPrice",
+        "delayFee",
+        json_build_object('id', customer_id, 'name', customer_name) AS customer,
+        json_build_object('id', game_id, 'name', game_name) AS game
+      FROM rental_game_customer
+    ) rental_game_customer;
       `);
 
-    console.log(rentals.rows);
-    res.status(200).send(rentals.rows);
-  } catch (error) {
-    res.status(500).send(error.message);
+    return res.status(200).send(rentals.rows);
+  } catch (err) {
+    return res.status(500).send(err.message);
   }
 }
 
 // POST RENTAL
 export async function postRental(req, res) {
   const { customerId, gameId, daysRented } = req.body;
-  const dateNow = new Date();
-  const rentDate = dateNow.toISOString().split("T")[0];
-  let originalPrice = 0;
-  const returnDate = null;
-  const delayFee = null;
   try {
-    const game = await db.query(`SELECT * FROM ${gamesTable} WHERE id = $1`, [
-      gameId,
-    ]);
+    const game = await db.query(
+      `SELECT * FROM ${gamesTable}
+      WHERE id = $1`,
+      [gameId]
+    );
     const { pricePerDay } = game.rows[0];
-    originalPrice = pricePerDay * daysRented;
+    const originalPrice = pricePerDay * daysRented;
 
     // Check if customer is valid
     const customerExists = await db.query(
-      `SELECT * FROM ${customersTable} WHERE id = $1`,
+      `SELECT * FROM ${customersTable}
+      WHERE id = $1`,
       [customerId]
     );
     if (customerExists.rows[0] === 0) {
-      return res.status(400).send("Customer not found!");
+      return res.sendStatus(400);
     }
 
     // Check if game is valid
@@ -70,12 +69,13 @@ export async function postRental(req, res) {
       [gameId]
     );
     if (gameExists.rows[0] === 0) {
-      return res.status(400).send("Game not found!");
+      return res.sendStatus(400);
     }
 
     // Check if game is available
     const gamesRented = await db.query(
-      `SELECT * FROM ${rentalsTable} WHERE "gameId" = $1 AND "returnDate" IS NULL`,
+      `SELECT * FROM ${rentalsTable}
+        WHERE "gameId" = $1 AND "returnDate" IS NULL`,
       [gameId]
     );
 
@@ -84,11 +84,17 @@ export async function postRental(req, res) {
 
     const notInStock = gameStock <= gameRented;
     if (notInStock) {
-      return res.status(400).send("Game not in stock!");
+      return res.sendStatus(400);
     }
 
+    const dateNow = new Date();
+    const rentDate = dateNow.toISOString().split("T")[0];
+    const returnDate = null;
+    const delayFee = null;
+
     const rental = await db.query(
-      `INSERT INTO ${rentalsTable} ("customerId", "gameId", "rentDate", "daysRented", "returnDate", "originalPrice", "delayFee") VALUES ($1, $2, $3, $4, $5, $6, $7);`,
+      `INSERT INTO ${rentalsTable} ("customerId", "gameId", "rentDate", "daysRented", "returnDate", "originalPrice", "delayFee") 
+        VALUES ($1, $2, $3, $4, $5, $6, $7);`,
       [
         customerId,
         gameId,
@@ -99,35 +105,34 @@ export async function postRental(req, res) {
         delayFee,
       ]
     );
-    res.status(201).send();
-  } catch (error) {
-    res.status(500).send(error.message);
+    return res.sendStatus(201);
+  } catch (err) {
+    return res.status(500).send(err.message);
   }
 }
 
 // RETURN RENTAL
 export async function postRentalReturn(req, res) {
   const { id } = req.params;
-  const dateNow = new Date();
-  const newReturnDate = dateNow.toISOString().split("T")[0];
-  let rental;
-  console.log(newReturnDate);
 
   try {
     const rentalExists = await db.query(
-      `SELECT * FROM ${rentalsTable} WHERE id = $1`,
+      `SELECT * FROM ${rentalsTable}
+        WHERE id = $1`,
       [id]
     );
     if (rentalExists.rows.length === 0) {
-      return res.status(404).send("Rental not found!");
+      return res.sendStatus(404);
     }
-    rental = rentalExists.rows[0];
+    const rental = rentalExists.rows[0];
 
     const returned = rental.returnDate;
     if (returned !== null) {
-      return res.status(400).send("Rental already returned!");
+      return res.sendStatus(400);
     }
 
+    const dateNow = new Date();
+    const newReturnDate = dateNow.toISOString().split("T")[0];
     const rentDate = new Date(rental.rentDate);
     const daysRented = rental.daysRented;
     const returnDate = new Date(newReturnDate);
@@ -135,22 +140,29 @@ export async function postRentalReturn(req, res) {
     const diffDays = Math.ceil(timeDiff / (1000 * 3600 * 24));
     const delay = diffDays - daysRented;
     let delayFee = 0;
+
     if (delay > 0) {
-      const game = await db.query(`SELECT * FROM ${gamesTable} WHERE id = $1`, [
-        rental.gameId,
-      ]);
+      const game = await db.query(
+        `SELECT * FROM ${gamesTable}
+        WHERE id = $1`,
+        [rental.gameId]
+      );
       const { pricePerDay } = game.rows[0];
 
       delayFee = delay * pricePerDay;
     }
 
     const updatedRental = await db.query(
-      `UPDATE ${rentalsTable} SET "returnDate" = $1, "delayFee" = $2 WHERE id = $3`,
+      `UPDATE ${rentalsTable}
+        SET "returnDate" = $1, "delayFee" = $2
+        WHERE id = $3`,
       [newReturnDate, delayFee, id]
     );
 
-    res.status(200).send();
-  } catch (error) {}
+    return res.status(200).send();
+  } catch (err) {
+    return res.status(500).send(err.message);
+  }
 }
 
 // DELETE RENTAL
@@ -159,27 +171,29 @@ export async function deleteRental(req, res) {
 
   try {
     const rentalExists = await db.query(
-      `SELECT * FROM ${rentalsTable} WHERE id = $1`,
+      `SELECT * FROM ${rentalsTable}
+        WHERE id = $1`,
       [id]
     );
     if (rentalExists.rows.length === 0) {
-      return res.status(404).send("Rental not found!");
+      return res.sendStatus(404);
     }
 
     const rental = rentalExists.rows[0];
 
     const returned = rental.returnDate;
     if (returned === null) {
-      return res.status(400).send("Rental not returned!");
+      return res.sendStatus(400);
     }
 
     const deletedRental = await db.query(
-      `DELETE FROM ${rentalsTable} WHERE id = $1`,
+      `DELETE FROM ${rentalsTable}
+        WHERE id = $1`,
       [id]
     );
 
-    res.status(200).send();
-  } catch (error) {
-    res.status(500).send(error.message);
+    return res.sendStatus(200);
+  } catch (err) {
+    return res.status(500).send(err.message);
   }
 }
